@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cardiac Segmentation QC Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body>
+    <!-- Top Bar -->
+    <div id="top-bar">
+        <h1>Cardiac Segmentation QC Studio</h1>
+        <div id="user-info">
+            <span id="current-user">{{ username }}</span>
+            <a id="logout-link" href="/logout">Logout</a>
+        </div>
+    </div>
+
+    <div id="main-container">
+        <!-- Left Panel (MRI Slices) -->
+        <div id="left-panel" class="panel">
+            <div class="panel-title">Short Axis View - Slice <span id="slice-number">1</span>/<span id="total-slices">0</span></div>
+            <canvas id="mri-canvas"></canvas>
+            <div class="overlay-control">
+                <input type="checkbox" id="overlay-checkbox">
+                <label for="overlay-checkbox">Show Overlay</label>
+            </div>
+            <div class="zoom-control" style="min-width: 420px;">
+                <div style="display: flex; gap: 18px;">
+                    <div style="flex: 1;">
+                        <div style="font-size: 9.5px; letter-spacing: 0.2em; color: var(--text-2); margin-bottom: 4px;">Zoom</div>
+                        <div class="zoom-slider-container">
+                            <input type="range" id="zoom-slider" class="zoom-slider" min="50" max="300" value="170" step="10">
+                            <span id="zoom-value" class="zoom-value">170%</span>
+                        </div>
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="font-size: 9.5px; letter-spacing: 0.2em; color: var(--text-2); margin-bottom: 4px;">Transparency</div>
+                        <div class="zoom-slider-container">
+                            <input type="range" id="transparency-slider" class="zoom-slider" min="0" max="100" value="50">
+                            <span id="transparency-value" class="zoom-value">50%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Middle Panel (Segmentation) -->
+        <div id="middle-panel" class="panel">
+            <div class="panel-title">Segmentation - Slice <span id="seg-slice-number">1</span>/<span id="seg-total-slices">0</span></div>
+            <img id="seg-slice-img" alt="Segmentation Slice" class="placeholder-img" style="image-rendering: pixelated;">
+        </div>
+
+        <!-- Right Panel (3D Visualization) -->
+        <div id="right-panel" class="panel">
+            <div class="panel-title">3D Visualization</div>
+            <div id="container"></div>
+            <div id="info">
+                <div id="info-header">
+                    <h1>Controls</h1>
+                    <span id="info-minimize-btn" title="Minimize">－</span>
+                </div>
+                <div id="info-content">
+                    L-click + drag &nbsp;·&nbsp; rotate<br>
+                    R-click + drag &nbsp;·&nbsp; pan<br>
+                    Scroll &nbsp;·&nbsp; zoom<br>
+                    <div id="stats"></div>
+                </div>
+            </div>
+            <div id="loading">LOADING CMR SEGMENTATION</div>
+            <img id="lab-logo" src="https://images.squarespace-cdn.com/content/v1/611bce9f0ec5ff43949b98ea/068036ac-5a6f-4da8-869f-520764bdaaaa/still_v023_frame_0103_photoshop_layer_logo_LMS.png?format=1500w" alt="Lab Logo">
+        </div>
+    </div>
+
+    <!-- Status Message -->
+    <div id="status-message"></div>
+
+    <!-- Floating QC Panel -->
+    <div id="floating-qc-panel">
+        <div id="panel-header">
+            <span id="panel-title">Control Panel</span>
+            <div style="display: flex; gap: 10px;">
+                <span id="minimize-btn" style="cursor: pointer; font-size: 18px; line-height: 1;" title="Minimize">－</span>
+                <span id="drag-icon">⋮⋮</span>
+            </div>
+        </div>
+        <div id="panel-content">
+            <div style="padding: 12px 14px; border-bottom: 1px solid var(--line);">
+                <div class="qc-checkbox-label" style="padding: 0;">Patient Selector</div>
+                <select id="patient-selector">
+                    <option value="">Loading patients...</option>
+                </select>
+                <div id="patient-count-display" style="color: var(--text-2); font-size: 9.5px; margin-top: 6px; text-align: center; letter-spacing: 0.16em; text-transform: uppercase;"></div>
+            </div>
+            <div style="padding: 12px 14px; border-bottom: 1px solid var(--line);">
+                <div class="qc-checkbox-label" style="padding: 0;">Cardiac Phase</div>
+                <div style="display: flex; gap: 8px;">
+                    <button id="ed-phase-btn" class="phase-btn phase-active">ED</button>
+                    <button id="es-phase-btn" class="phase-btn">ES</button>
+                </div>
+            </div>
+        <div id="comments-section">
+            <label id="comments-label" for="patient-comments">Patient Comments</label>
+            <textarea id="patient-comments" placeholder="Enter comments here..."></textarea>
+        </div>
+        <label class="qc-checkbox-label">QC Decision</label>
+        <div class="qc-checkbox-section">
+            <div class="qc-checkbox-item accept">
+                <input type="checkbox" id="accept-checkbox">
+                <label for="accept-checkbox">Accept</label>
+            </div>
+            <div class="qc-checkbox-item reject">
+                <input type="checkbox" id="reject-checkbox">
+                <label for="reject-checkbox">Reject</label>
+            </div>
+            <div class="qc-checkbox-item finetune">
+                <input type="checkbox" id="finetune-checkbox">
+                <label for="finetune-checkbox">Fine-tune</label>
+            </div>
+            <div class="qc-checkbox-item unclassified">
+                <input type="checkbox" id="unclassified-checkbox">
+                <label for="unclassified-checkbox">Unclass</label>
+            </div>
+        </div>
+        <div id="qc-buttons">
+            <div class="navigation-buttons">
+                <button id="prev-slice-btn" class="nav-btn">◀◀  SLICE</button>
+                <button id="next-slice-btn" class="nav-btn">SLICE  ▶▶</button>
+            </div>
+            <button id="play-pause-btn" class="qc-button">▶  PLAY SLICES</button>
+            <div class="navigation-buttons">
+                <button id="prev-btn" class="nav-btn">◀  PREV</button>
+                <button id="next-btn" class="nav-btn">NEXT  ▶</button>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button id="save-btn" class="qc-button" style="flex: 1;">Save</button>
+                <button id="download-btn" class="qc-button" style="flex: 1;">Export JSON</button>
+            </div>
+        </div>
+        </div>
+    </div>
+
+    <!-- Floating Statistics Panel -->
+    <div id="floating-stats-panel">
+        <div id="stats-panel-header">
+            <span id="stats-panel-title">QC Statistics</span>
+            <span id="stats-minimize-btn" title="Minimize">－</span>
+        </div>
+        <div id="stats-panel-content">
+            <div id="dataset-selector-container">
+                <label for="dataset-selector">Dataset</label>
+                <select id="dataset-selector">
+                    <option value="">Loading datasets...</option>
+                </select>
+            </div>
+            <div id="chart-container">
+                <canvas id="qc-pie-chart"></canvas>
+            </div>
+            <div class="stats-summary" id="stats-summary">
+                <!-- Will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <script>
+        // Patient data injected from Flask. Top-level const in a classic script
+        // is visible to subsequent classic scripts via the shared global lexical
+        // environment, so app.js can reference these directly.
+        const PATIENT_INDEX = {{ patient_index }};
+        const PATIENT_PATH = "{{ patient_path }}";
+        const TOTAL_PATIENTS = {{ total_patients }};
+        const CURRENT_PHASE = "{{ phase }}";
+        const QC_COMMENT = "{{ qc_comment }}";
+
+        const MRI_SLICES = {{ mri_slices|safe }};
+        const SEG_SLICES = {{ seg_slices|safe }};
+
+        const SEG_COORDS = {{ seg_coords|safe }};
+        const SEG_LABELS = {{ seg_labels|safe }};
+        const SEG_SHAPE = {{ seg_shape }};
+        const SEG_SPACING = {{ seg_spacing }};
+
+        const CURRENT_USER = "{{ username }}";
+        const QC_FILES = {{ qc_files|safe }};
+        const ACTIVE_QC_FILE = "{{ active_qc_file }}";
+    </script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
